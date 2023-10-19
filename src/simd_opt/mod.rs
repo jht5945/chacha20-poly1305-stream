@@ -11,8 +11,8 @@
 macro_rules! transmute_shuffle {
     ($tmp:ident, $shuffle:ident, $vec:expr, $idx:expr) => {
         unsafe {
-            use simdty::$tmp;
-            use simdint::$shuffle;
+            use crate::simdty::$tmp;
+            use crate::simdint::$shuffle;
             use std::mem::transmute;
 
             let tmp_i: $tmp = transmute($vec);
