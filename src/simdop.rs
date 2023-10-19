@@ -6,7 +6,8 @@
 // copied, modified, or distributed except according to those terms.
 
 use crate::simdty::u32x4;
-#[cfg(feature = "simd")] use crate::simdint;
+#[cfg(feature = "simd")]
+use crate::simdint;
 
 use std::ops::{Add, BitXor, Shl, Shr};
 

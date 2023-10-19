@@ -55,5 +55,7 @@ impl<T> Simd4<T> {
 }
 
 unsafe impl<T: Safe> Safe for Simd4<T> {}
+
 unsafe impl<T: Safe> Safe for Simd8<T> {}
+
 unsafe impl<T: Safe> Safe for Simd16<T> {}

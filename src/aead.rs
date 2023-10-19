@@ -22,7 +22,7 @@ const CHACHA20_COUNTER_OVERFLOW: u64 = ((1 << 32) - 1) * 64;
 /// # Example
 ///
 /// ```
-/// use chacha20_poly1305_aead::encrypt;
+/// use chacha20_poly1305_stream::encrypt;
 ///
 /// let key = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 ///            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
@@ -99,9 +99,9 @@ pub fn encrypt_read<R: Read, W: Write>(key: &[u8], nonce: &[u8],
 /// # Example
 ///
 /// ```
-/// # use chacha20_poly1305_aead::DecryptError;
+/// # use chacha20_poly1305_stream::DecryptError;
 /// # fn example() -> Result<(), DecryptError> {
-/// use chacha20_poly1305_aead::decrypt;
+/// use chacha20_poly1305_stream::decrypt;
 ///
 /// let key = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 ///            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
@@ -116,7 +116,7 @@ pub fn encrypt_read<R: Read, W: Write>(key: &[u8], nonce: &[u8],
 /// // Vec implements the Write trait
 /// let mut plaintext = Vec::with_capacity(ciphertext.len());
 ///
-/// try!(decrypt(&key, &nonce, &aad, &ciphertext, &tag, &mut plaintext));
+/// decrypt(&key, &nonce, &aad, &ciphertext, &tag, &mut plaintext)?;
 ///
 /// assert_eq!(plaintext, b"hello, world");
 /// # Ok(())

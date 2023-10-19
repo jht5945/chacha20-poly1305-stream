@@ -34,10 +34,17 @@ impl<T: Safe> AsBytes for [T] {
 }
 
 unsafe impl Safe for u8 {}
+
 unsafe impl Safe for u16 {}
+
 unsafe impl Safe for u32 {}
+
 unsafe impl Safe for u64 {}
+
 unsafe impl Safe for i8 {}
+
 unsafe impl Safe for i16 {}
+
 unsafe impl Safe for i32 {}
+
 unsafe impl Safe for i64 {}

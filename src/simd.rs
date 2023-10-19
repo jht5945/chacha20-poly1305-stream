@@ -23,9 +23,12 @@ pub trait Vector4<T>: Copy {
     fn shuffle_left_2(self) -> Self;
     fn shuffle_left_3(self) -> Self;
 
-    #[inline(always)] fn shuffle_right_1(self) -> Self { self.shuffle_left_3() }
-    #[inline(always)] fn shuffle_right_2(self) -> Self { self.shuffle_left_2() }
-    #[inline(always)] fn shuffle_right_3(self) -> Self { self.shuffle_left_1() }
+    #[inline(always)]
+    fn shuffle_right_1(self) -> Self { self.shuffle_left_3() }
+    #[inline(always)]
+    fn shuffle_right_2(self) -> Self { self.shuffle_left_2() }
+    #[inline(always)]
+    fn shuffle_right_3(self) -> Self { self.shuffle_left_1() }
 }
 
 macro_rules! impl_vector4 {
