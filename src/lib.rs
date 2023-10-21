@@ -66,7 +66,7 @@ pub fn chacha20_poly1305_decrypt(key: &[u8], nonce: &[u8], message: &[u8]) -> Re
 
 /// ChaCha20Policy Encrypt with AAD
 pub fn chacha20_poly1305_aad_encrypt(key: &[u8], nonce: &[u8], aad: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
-    let mut encryptor = ChaCha20Poly1305StreamEncryptor::new(&key, &nonce)?;
+    let mut encryptor = ChaCha20Poly1305StreamEncryptor::new(key, nonce)?;
     if !aad.is_empty() { encryptor.init_adata(aad); }
     let mut b1 = encryptor.update(message);
     let (last_block, tag) = encryptor.finalize();
@@ -77,7 +77,7 @@ pub fn chacha20_poly1305_aad_encrypt(key: &[u8], nonce: &[u8], aad: &[u8], messa
 
 /// ChaCha20Policy Decrypt with AAD
 pub fn chacha20_poly1305_aad_decrypt(key: &[u8], nonce: &[u8], aad: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
-    let mut decryptor = ChaCha20Poly1305StreamDecryptor::new(&key, &nonce)?;
+    let mut decryptor = ChaCha20Poly1305StreamDecryptor::new(key, nonce)?;
     if !aad.is_empty() { decryptor.init_adata(aad); }
     let mut b1 = decryptor.update(message);
     let last_block = decryptor.finalize()?;
