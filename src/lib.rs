@@ -32,10 +32,12 @@
 #![cfg_attr(feature = "simd", feature(platform_intrinsics, repr_simd))]
 #![cfg_attr(feature = "simd_opt", feature(cfg_target_feature))]
 
+extern crate constant_time_eq;
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
-extern crate constant_time_eq;
+pub use stream_decryptor::ChaCha20Poly1305StreamDecryptor;
+pub use stream_encryptor::ChaCha20Poly1305StreamEncryptor;
 
 mod as_bytes;
 
@@ -47,14 +49,66 @@ mod simd;
 
 mod chacha20;
 mod poly1305;
-mod aead;
+// mod aead;
+mod stream_util;
+mod stream_encryptor;
+mod stream_decryptor;
 
-pub use aead::{DecryptError, decrypt, encrypt, encrypt_read};
+/// ChaCha20Policy Encrypt
+pub fn chacha20_poly1305_encrypt(key: &[u8], nonce: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
+    chacha20_poly1305_aad_encrypt(key, nonce, &[], message)
+}
 
-/// Runs the self-test for ChaCha20, Poly1305, and the AEAD.
+/// ChaCha20Policy Decrypt
+pub fn chacha20_poly1305_decrypt(key: &[u8], nonce: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
+    chacha20_poly1305_aad_decrypt(key, nonce, &[], message)
+}
+
+/// ChaCha20Policy Encrypt with AAD
+pub fn chacha20_poly1305_aad_encrypt(key: &[u8], nonce: &[u8], aad: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
+    let mut encryptor = ChaCha20Poly1305StreamEncryptor::new(&key, &nonce)?;
+    if !aad.is_empty() { encryptor.init_adata(aad); }
+    let mut b1 = encryptor.update(message);
+    let (last_block, tag) = encryptor.finalize();
+    b1.extend_from_slice(&last_block);
+    b1.extend_from_slice(&tag);
+    Ok(b1)
+}
+
+/// ChaCha20Policy Decrypt with AAD
+pub fn chacha20_poly1305_aad_decrypt(key: &[u8], nonce: &[u8], aad: &[u8], message: &[u8]) -> Result<Vec<u8>, String> {
+    let mut decryptor = ChaCha20Poly1305StreamDecryptor::new(&key, &nonce)?;
+    if !aad.is_empty() { decryptor.init_adata(aad); }
+    let mut b1 = decryptor.update(message);
+    let last_block = decryptor.finalize()?;
+    b1.extend_from_slice(&last_block);
+    Ok(b1)
+}
+
+/// Runs the self-test for ChaCha20, Poly1305
 #[cold]
 pub fn selftest() {
     chacha20::selftest();
     poly1305::selftest();
-    aead::selftest::selftest();
+}
+
+#[test]
+fn test_enc_dec() {
+    let key = [0u8; 32];
+    let nonce = [0u8; 12];
+    let aad = b"hello world";
+    let plaintext = [0u8; 1000];
+
+    let ciphertext = chacha20_poly1305_aad_encrypt(&key, &nonce, aad, &plaintext).unwrap();
+
+    let mut output = vec![];
+    let mut plaintext = plaintext.to_vec();
+    let tag = chacha20_poly1305_aead::encrypt(
+        &key, &nonce, &aad[..], &mut plaintext, &mut output).unwrap();
+    output.extend_from_slice(&tag);
+
+    assert_eq!(ciphertext, output);
+
+    let plaintext_decrypted = chacha20_poly1305_aad_decrypt(&key, &nonce, aad, &ciphertext).unwrap();
+    assert_eq!(plaintext, plaintext_decrypted);
 }
