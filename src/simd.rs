@@ -12,6 +12,7 @@ use crate::simd_opt;
 pub use crate::simdty::u32x4;
 
 pub trait Vector4<T>: Copy {
+    #[allow(clippy::wrong_self_convention)]
     fn from_le(self) -> Self;
     fn to_le(self) -> Self;
 

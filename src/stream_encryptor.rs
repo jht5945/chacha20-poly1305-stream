@@ -16,8 +16,8 @@ pub struct ChaCha20Poly1305StreamEncryptor {
 impl ChaCha20Poly1305StreamEncryptor {
     /// New ChaCha20Poly1305StreamEncryptor
     pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, String> {
-        if key.len() != 32 { return Err("Bad key length".to_string()); }
-        if nonce.len() != 12 { return Err("Bad nonce length".to_string()); }
+        stream_util::verify_key_nonce_length(key, nonce)?;
+
         let mut chacha20 = ChaCha20::new(key, nonce);
         let poly1305 = Poly1305::new(&chacha20.next().as_bytes()[..32]);
         Ok(Self {
@@ -76,10 +76,9 @@ impl ChaCha20Poly1305StreamEncryptor {
         }
 
         self.poly1305.block([self.adata_len.to_le(), self.message_len.to_le()].as_bytes());
+        let tag = self.poly1305.tag().as_bytes().to_vec();
 
-        let mut tag = [0; 16];
-        tag.clone_from_slice(self.poly1305.tag().as_bytes());
-        (last_block, tag.to_vec())
+        (last_block, tag)
     }
 }
 

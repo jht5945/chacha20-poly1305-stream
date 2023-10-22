@@ -16,8 +16,8 @@ pub struct ChaCha20Poly1305StreamDecryptor {
 impl ChaCha20Poly1305StreamDecryptor {
     /// New ChaCha20Poly1305StreamDecryptor
     pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, String> {
-        if key.len() != 32 { return Err("Bad key length".to_string()); }
-        if nonce.len() != 12 { return Err("Bad nonce length".to_string()); }
+        stream_util::verify_key_nonce_length(key, nonce)?;
+
         let mut chacha20 = ChaCha20::new(key, nonce);
         let poly1305 = Poly1305::new(&chacha20.next().as_bytes()[..32]);
         Ok(Self {
@@ -43,17 +43,17 @@ impl ChaCha20Poly1305StreamDecryptor {
         let mut buf = [u32x4::default(); 4];
         let b_len = buf.as_bytes().len();
 
-        let valid_message_len = if self.message_buffer.len() >= 16 { self.message_buffer.len() - 16 } else { 0 };
-        let b_count = valid_message_len / b_len;
+        let payload_len = if self.message_buffer.len() >= 16 { self.message_buffer.len() - 16 } else { 0 };
+        let b_count = payload_len / b_len;
         if b_count == 0 {
             return vec![];
         }
 
         let mut decrypted = Vec::with_capacity(b_len * b_count);
         for i in 0..b_count {
-            let encrypted = &self.message_buffer[(b_len * i)..(b_len * (i + 1))];
-            self.poly1305.padded_blocks(encrypted);
-            buf.as_mut_bytes().copy_from_slice(encrypted);
+            let b_encrypted = &self.message_buffer[(b_len * i)..(b_len * (i + 1))];
+            self.poly1305.padded_blocks(b_encrypted);
+            buf.as_mut_bytes().copy_from_slice(b_encrypted);
             stream_util::next_chacha20_xor(&mut self.chacha20, &mut buf);
             decrypted.extend_from_slice(buf.as_bytes());
         }
@@ -64,33 +64,33 @@ impl ChaCha20Poly1305StreamDecryptor {
 
     /// Finalize decrypt
     pub fn finalize(mut self) -> Result<Vec<u8>, String> {
-        let mut last_block = vec![];
         if self.message_buffer.len() < 16 {
             return Err("Bad tag length".to_string());
         }
-        let message_buffer_len = self.message_buffer.len() - 16;
-        if message_buffer_len > 0 {
+        let mut last_decrypted_block = vec![];
+        let last_payload_len = self.message_buffer.len() - 16;
+        if last_payload_len > 0 {
             let mut buf = [u32x4::default(); 4];
             let buf_bytes = buf.as_mut_bytes();
-            let encrypted = &self.message_buffer[..message_buffer_len];
-            buf_bytes[..message_buffer_len].copy_from_slice(encrypted);
+            let last_b_encrypted = &self.message_buffer[..last_payload_len];
+            buf_bytes[..last_payload_len].copy_from_slice(last_b_encrypted);
             stream_util::next_chacha20_xor(&mut self.chacha20, &mut buf);
-            let last_block_bytes = &buf.as_bytes()[..message_buffer_len];
-            self.poly1305.padded_blocks(encrypted);
-            last_block.extend_from_slice(last_block_bytes);
-            self.message_len += last_block.len() as u64;
+            let last_b_decrypted = &buf.as_bytes()[..last_payload_len];
+            self.poly1305.padded_blocks(last_b_encrypted);
+            last_decrypted_block.extend_from_slice(last_b_decrypted);
+            self.message_len += last_decrypted_block.len() as u64;
         }
-        let message_tag = &self.message_buffer[message_buffer_len..];
+
+        let message_tag = &self.message_buffer[last_payload_len..];
 
         self.poly1305.block([self.adata_len.to_le(), self.message_len.to_le()].as_bytes());
-
-        let mut tag = [0; 16];
-        tag.clone_from_slice(self.poly1305.tag().as_bytes());
+        let poly1305_tag = self.poly1305.tag();
+        let tag = poly1305_tag.as_bytes();
         if message_tag != tag {
             Err(format!("Tag mismatch, expected: {}, actual: {}",
                         hex::encode(tag), hex::encode(message_tag)))
         } else {
-            Ok(last_block)
+            Ok(last_decrypted_block)
         }
     }
 }
